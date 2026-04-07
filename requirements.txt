@@ -1,0 +1,197 @@
+﻿# =============================================================================
+# LLM-Operated Knowledge Base Architectures: Production Dependencies
+# =============================================================================
+# 
+# This requirements file provides a complete specification of all third-party
+# dependencies for the LLM Knowledge Base system. It follows PEP 440 version
+# specification standards and employs semantic versioning principles.
+#
+# Version Pinning Strategy:
+# - Core dependencies: Exact pinning (==) for maximum reproducibility
+# - ML frameworks: Compatible release (~=) to allow patch updates
+# - Utility libraries: Minimum version (>=) with upper bounds where stability matters
+#
+# Installation:
+#   pip install -r requirements.txt
+#
+# Optional Dependencies:
+#   For GPU acceleration: pip install -r requirements.txt[gpu]
+#   For development: pip install -r requirements.txt[dev]
+#
+# Author: CS Chirinda
+# License: MIT
+# Python Requirement: >=3.9,<3.13
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Core Dependencies (Required)
+# -----------------------------------------------------------------------------
+
+# YAML parsing and serialization for configuration and front matter
+PyYAML==6.0.1
+
+# Graph data structure and algorithms for knowledge graph operations
+networkx==3.2.1
+
+# OpenAI API client for LLM orchestration and prompt engineering
+openai==1.54.3
+
+# -----------------------------------------------------------------------------
+# Machine Learning and NLP Core (Required for LLM Operations)
+# -----------------------------------------------------------------------------
+
+# PyTorch deep learning framework (CPU version)
+# Note: For GPU support, install torch with CUDA support separately
+torch==2.2.2
+
+# HuggingFace Transformers for pretrained model loading and inference
+transformers==4.44.2
+
+# HuggingFace Datasets for efficient data loading and processing
+datasets==2.20.0
+
+# Parameter-Efficient Fine-Tuning (PEFT) library for LoRA adapters
+peft==0.13.2
+
+# Transformer Reinforcement Learning (TRL) for supervised fine-tuning
+trl==0.11.4
+
+# Bits and Bytes for quantization support (required by BitsAndBytesConfig)
+bitsandbytes==0.44.1
+
+# Accelerate for distributed training and mixed precision
+accelerate==0.34.2
+
+# -----------------------------------------------------------------------------
+# Natural Language Processing (Required for Robust Text Processing)
+# -----------------------------------------------------------------------------
+
+# Natural Language Toolkit for sentence boundary detection and tokenization
+nltk==3.9.1
+
+# spaCy for advanced NLP tasks and entity recognition
+spacy==3.7.6
+
+# English language model for spaCy (install separately if needed)
+# python -m spacy download en_core_web_sm
+
+# -----------------------------------------------------------------------------
+# Markdown and Document Processing (Required)
+# -----------------------------------------------------------------------------
+
+# markdown-it-py for AST-based Markdown parsing with syntax tree access
+markdown-it-py==3.0.0
+
+# python-frontmatter for YAML front matter extraction and manipulation
+python-frontmatter==1.1.0
+
+# -----------------------------------------------------------------------------
+# Infrastructure and Execution (Optional but Recommended)
+# -----------------------------------------------------------------------------
+
+# Docker SDK for Python for secure sandboxed code execution
+docker==7.1.0
+
+# -----------------------------------------------------------------------------
+# Utility and Support Libraries
+# -----------------------------------------------------------------------------
+
+# Requests for HTTP operations (often used by various libraries)
+requests>=2.31.0,<3.0.0
+
+# Typing extensions for enhanced type hints (backports for older Python)
+typing-extensions>=4.9.0
+
+# Packaging for version parsing and comparison
+packaging>=23.2
+
+# -----------------------------------------------------------------------------
+# Additional Recommended Dependencies
+# -----------------------------------------------------------------------------
+
+# Tokenizers (fast tokenization backend for transformers)
+tokenizers>=0.19.1
+
+# Safetensors for secure and efficient tensor serialization
+safetensors>=0.4.3
+
+# Sentencepiece for subword tokenization (required by some models)
+sentencepiece>=0.2.0
+
+# Protobuf for serialization (required by some ML libraries)
+protobuf>=4.25.0,<5.0.0
+
+# NumPy for numerical operations (core dependency for ML stack)
+numpy>=1.24.0,<2.0.0
+
+# Pandas for data manipulation (useful for dataset operations)
+pandas>=2.1.0,<3.0.0
+
+# Scikit-learn for traditional ML utilities and metrics
+scikit-learn>=1.4.0
+
+# -----------------------------------------------------------------------------
+# Development and Testing Dependencies (Optional)
+# -----------------------------------------------------------------------------
+
+# Uncomment for development environment:
+# pytest>=8.0.0
+# pytest-cov>=4.1.0
+# black>=24.0.0
+# flake8>=7.0.0
+# mypy>=1.8.0
+# isort>=5.13.0
+# pylint>=3.0.0
+
+# -----------------------------------------------------------------------------
+# Platform-Specific Notes
+# -----------------------------------------------------------------------------
+
+# Windows Users:
+#   - Some packages may require Microsoft C++ Build Tools
+#   - Docker Desktop must be installed for docker-py functionality
+#
+# Linux Users:
+#   - Ensure libgomp1 is installed for PyTorch CPU operations
+#   - Docker daemon must be running for docker-py functionality
+#
+# macOS Users:
+#   - Apple Silicon (M1/M2/M3): Consider MPS acceleration for torch
+#   - Docker Desktop must be installed for docker-py functionality
+#
+# GPU Acceleration:
+#   For CUDA 11.8:
+#     pip install torch==2.2.2 --index-url https://download.pytorch.org/whl/cu118
+#   For CUDA 12.1:
+#     pip install torch==2.2.2 --index-url https://download.pytorch.org/whl/cu121
+
+# -----------------------------------------------------------------------------
+# Known Compatibility Issues and Resolutions
+# -----------------------------------------------------------------------------
+
+# Issue: transformers + peft version mismatch
+#   Resolution: Use peft>=0.13.0 with transformers>=4.44.0
+#
+# Issue: bitsandbytes not available on Windows
+#   Resolution: Use WSL2 or Linux/macOS for quantization features
+#
+# Issue: spaCy model not found
+#   Resolution: Run `python -m spacy download en_core_web_sm` post-install
+#
+# Issue: NLTK punkt tokenizer not found
+#   Resolution: Run `python -m nltk.downloader punkt` or use in-code download
+
+# -----------------------------------------------------------------------------
+# Verification Commands
+# -----------------------------------------------------------------------------
+
+# After installation, verify critical imports:
+#   python -c "import torch; print(f'PyTorch: {torch.__version__}')"
+#   python -c "import transformers; print(f'Transformers: {transformers.__version__}')"
+#   python -c "import peft; print(f'PEFT: {peft.__version__}')"
+#   python -c "import networkx; print(f'NetworkX: {networkx.__version__}')"
+#   python -c "import openai; print(f'OpenAI: {openai.__version__}')"
+
+# =============================================================================
+# End of Requirements Specification
+# =============================================================================
