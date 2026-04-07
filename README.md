@@ -94,7 +94,7 @@ $$ \mathcal{D}_{\text{raw}}^{(t)} \xrightarrow{\Phi_{\text{compile}}} \mathcal{K
 Below is a diagram which summarizes the proposed approach:
 
 <div align="center">
-  <img src="https://github.com/chirindaopensource/llm_knowledge_bases_karpathy/blob/main/llm_knowledge_bases_karpathy_ipo_main.png" alt="LLM Knowledge Base Architecture" width="100%">
+  <img src="https://github.com/chirindaopensource/llm_knowledge_bases_karpathy/blob/main/llm_knowledge_bases_karpathy_ipo_main_three.png" alt="LLM Knowledge Base Architecture" width="100%">
 </div>
 
 ## Features
