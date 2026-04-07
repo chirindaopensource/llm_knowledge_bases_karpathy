@@ -1,0 +1,657 @@
+﻿# ===================================================================================================
+# LLM KNOWLEDGE BASES — COMPLETE STUDY CONFIGURATION (DESIGN PROPOSAL + SOURCE-FAITHFUL CONSTRAINTS)
+# ===================================================================================================
+# Notes on epistemic status:
+# - Anything tagged "SOURCE-FAITHFUL" is explicitly stated in the availed X post.
+# - Anything tagged "DESIGN PROPOSAL" is an implementation-grade default required to run scripted calls.
+# - The post provides no equations, no explicit neural network architecture details, and no verbatim prompts.
+# ==============================================================================
+
+# ==============================================================================
+# STUDY METADATA (SOURCE-FAITHFUL)
+# ==============================================================================
+study_metadata:
+  source_url: "https://x.com/karpathy/status/2039805659525644595"  # SOURCE-FAITHFUL: provided in resource header
+  date: "2026-04-02"  # SOURCE-FAITHFUL: provided in resource header
+  author: "Andrej Karpathy"  # SOURCE-FAITHFUL: provided in resource header
+  title: "LLM Knowledge Bases"  # SOURCE-FAITHFUL: provided in resource header
+  document_type: "x_post_workflow_note_not_formal_paper"  # SOURCE-FAITHFUL: format implies not a paper
+  explicit_equations_in_source: 0  # SOURCE-FAITHFUL: none present in provided excerpt
+  explicit_neural_network_architectures_named_in_source: []  # SOURCE-FAITHFUL: none named (only "LLMs" generically)
+  explicit_prompt_templates_in_source: []  # SOURCE-FAITHFUL: none included verbatim
+
+# ==============================================================================
+# CORE WORKFLOW OVERVIEW (SOURCE-FAITHFUL)
+# ==============================================================================
+workflow_overview:
+  tldr_pipeline:
+    raw_collection: true  # SOURCE-FAITHFUL: "raw data ... is collected"
+    llm_compiles_wiki: true  # SOURCE-FAITHFUL: "compiled by an LLM into a .md wiki"
+    llm_operates_with_tools: true  # SOURCE-FAITHFUL: "operated on by various CLIs by the LLM"
+    viewable_in_obsidian: true  # SOURCE-FAITHFUL: "viewable in Obsidian"
+  human_edit_policy:
+    human_rarely_edits_wiki_directly: true  # SOURCE-FAITHFUL: "I rarely touch it directly"
+    llm_maintains_wiki: true  # SOURCE-FAITHFUL: "LLM writes and maintains all of the data"
+
+# ==============================================================================
+# FILESYSTEM / REPO CONVENTIONS (MIXED: SOURCE-FAITHFUL + DESIGN PROPOSAL)
+# ==============================================================================
+filesystem_conventions:
+  raw_directory: "raw/"  # SOURCE-FAITHFUL: "index source documents ... into a raw/ directory"
+  wiki_directory: "wiki/"  # DESIGN PROPOSAL: post says "directory structure" of .md files but doesn't name it
+  assets_directory: "assets/"  # DESIGN PROPOSAL: helpful central place for shared images
+  logs_directory: "logs/"  # DESIGN PROPOSAL: required for reproducibility and audit
+  eval_directory: "eval/"  # DESIGN PROPOSAL: required to evaluate Q&A and fine-tuning
+  compiled_wiki_representation:
+    format: "collection_of_markdown_files"  # SOURCE-FAITHFUL: "a collection of .md files"
+    file_extension: ".md"  # SOURCE-FAITHFUL
+    organization: "directory_structure"  # SOURCE-FAITHFUL
+    suggested_subdirs:
+      index: "wiki/index/"      # DESIGN PROPOSAL: supports "index files and brief summaries"
+      concepts: "wiki/concepts/"# DESIGN PROPOSAL: supports "concepts" + "articles for them"
+      sources: "wiki/sources/"  # DESIGN PROPOSAL: supports per-raw-source summaries
+      derived: "wiki/derived/"  # DESIGN PROPOSAL: supports filing outputs back into wiki
+  image_localization_requirement:
+    download_related_images_locally: true  # SOURCE-FAITHFUL: "download all related images to local"
+    allowed_image_extensions: [".png", ".jpg", ".jpeg", ".webp", ".svg"]  # DESIGN PROPOSAL
+    linking_policy:
+      allow_relative_links: true  # DESIGN PROPOSAL: typical in Obsidian vaults
+      preferred_link_style: "obsidian_wikilink_or_relative_path"  # DESIGN PROPOSAL
+  link_conventions:
+    wiki_link_style: "obsidian_wikilink"  # DESIGN PROPOSAL (consistent with Obsidian); post doesn't specify syntax
+    backlinks_required: true  # SOURCE-FAITHFUL: "backlinks"
+    cross_links_required: true  # SOURCE-FAITHFUL: "links them all"
+  immutability_rules:
+    raw_is_append_only: true  # DESIGN PROPOSAL: necessary for provenance/audit; post implies raw is source corpus
+    wiki_is_llm_managed: true  # SOURCE-FAITHFUL: LLM writes/maintains wiki
+
+# =======================================================================================
+# RAW / UNPROCESSED INPUT DATA STRUCTURE SCHEMAS (DESIGN PROPOSAL CONSISTENT WITH SOURCE)
+# =======================================================================================
+raw_input_schemas:
+  raw_directory_layout_schema:
+    description: "Representative raw/ layout consistent with SOURCE-FAITHFUL inputs: articles, papers, repos, datasets, images."
+    expected_subdirs:
+      web_articles_markdown: "raw/web/"
+      papers_pdf_and_extracts: "raw/papers/"
+      repos_snapshots: "raw/repos/"
+      datasets: "raw/datasets/"
+      standalone_images: "raw/images/"
+    required_files:
+      manifest: "raw/manifest.yaml"  # DESIGN PROPOSAL: enables incremental compilation tracking
+  raw_manifest_schema:
+    path: "raw/manifest.yaml"
+    schema_version: 1
+    top_level_fields:
+      version: "int"
+      created_at: "iso_date_string"
+      items: "list[item]"
+    item_schema:
+      id: "string (unique)"
+      type: "enum: web_article_markdown | paper_pdf | paper_extracted_markdown | git_repo_snapshot | dataset | image | other"
+      title_or_name: "string"
+      source_url: "string_or_null"
+      ingested_at: "iso_timestamp"
+      local_path: "string (repo-relative path)"
+      asset_dir: "string_or_null"
+      revision: "object_or_null (for repos)"
+      authors: "list[string]_or_null"
+      year: "int_or_null"
+      venue: "string_or_null"
+      tags: "list[string]_or_null"
+      notes: "list[string]_or_null"
+    example_item_types_in_scope:
+      - "web_article_markdown"  # SOURCE-FAITHFUL: web articles clipped to .md
+      - "paper_pdf"             # SOURCE-FAITHFUL: papers
+      - "git_repo_snapshot"     # SOURCE-FAITHFUL: repos
+      - "dataset"               # SOURCE-FAITHFUL: datasets
+      - "image"                 # SOURCE-FAITHFUL: images
+  dataset_card_schema:
+    path_example: "raw/datasets/<dataset_id>/DATASET_CARD.yaml"
+    fields:
+      name: "string"
+      description: "string"
+      owner: "string"
+      created_at: "iso_date_string"
+      files: "list[{path: string, description: string}]"
+      fields: "list[{name: string, type: string, examples?: list[string]}]"
+      intended_use: "list[string]"
+  repo_snapshot_schema:
+    path_example: "raw/repos/<repo_snapshot>/REPO_SNAPSHOT.yaml"
+    fields:
+      repo_name: "string"
+      source_url: "string"
+      snapshot_date: "iso_timestamp"
+      vcs: "string (e.g., git)"
+      commit: "string"
+      notes: "list[string]"
+
+# ==============================================================================
+# SOURCE INPUT TYPES (SOURCE-FAITHFUL)
+# ==============================================================================
+input_source_types_indexed_into_raw:
+  articles: true      # SOURCE-FAITHFUL: "(articles, papers, repos, datasets, images, etc.)"
+  papers: true        # SOURCE-FAITHFUL
+  repositories: true  # SOURCE-FAITHFUL
+  datasets: true      # SOURCE-FAITHFUL
+  images: true        # SOURCE-FAITHFUL
+  etc_unspecified: true  # SOURCE-FAITHFUL: "etc."
+
+# ==============================================================================
+# IDE / FRONTEND TOOLING (SOURCE-FAITHFUL)
+# ==============================================================================
+frontend_and_tools:
+  ide_frontend: "Obsidian"  # SOURCE-FAITHFUL: "I use Obsidian as the IDE 'frontend'"
+  web_to_markdown_tool: "Obsidian Web Clipper extension"  # SOURCE-FAITHFUL
+  plugins_mentioned:
+    marp_for_slides: true  # SOURCE-FAITHFUL: "Marp for slides"
+    other_plugins_unspecified: true  # SOURCE-FAITHFUL: "played with a few plugins"
+  visual_output_viewed_in_obsidian: true  # SOURCE-FAITHFUL
+  matplotlib_used_for_figures: true  # SOURCE-FAITHFUL: "matplotlib images"
+
+# ==============================================================================
+# SCALE REGIME (SOURCE-FAITHFUL)
+# ==============================================================================
+scale_regime_explicit_example:
+  wiki_article_count_example: 100  # SOURCE-FAITHFUL: "~100 articles"
+  wiki_word_count_example: 400000  # SOURCE-FAITHFUL: "~400K words"
+  scale_label: "small_scale"  # SOURCE-FAITHFUL: "at this ~small scale"
+  rag_requirement_claim:
+    fancy_rag_expected: true  # SOURCE-FAITHFUL: "I thought I had to reach for fancy RAG"
+    fancy_rag_needed_in_example_regime: false  # SOURCE-FAITHFUL: "but ... pretty good ... at this small scale"
+    reason: "auto-maintained_indexes_and_brief_summaries"  # SOURCE-FAITHFUL
+
+# ===============================================================================
+# LLM PROVIDER / AUTH / MODEL SELECTION (DESIGN PROPOSAL; USER-SPECIFIED MODELS)
+# ===============================================================================
+llm_provider_and_auth:
+  provider: "openai"  # DESIGN PROPOSAL (fits user instruction: QA uses an OpenAI multimodal model)
+  api_base_url: "https://api.openai.com/v1"  # DESIGN PROPOSAL
+  auth:
+    openai_api_key_env_var: "OPENAI_API_KEY"  # DESIGN PROPOSAL; user requested keys included—this is the safe form
+    openai_api_key_value_placeholder: "${OPENAI_API_KEY}"  # DESIGN PROPOSAL placeholder
+  model_ids:
+    question_answering: "gpt-5.2"  # USER-SPECIFIED
+    fine_tuning_base: "openai/gpt-oss-20b"  # USER-SPECIFIED
+    wiki_compilation: "gpt-5.2"  # DESIGN PROPOSAL
+    linting: "gpt-5.2"  # DESIGN PROPOSAL
+    artifact_rendering: "gpt-5.2"  # DESIGN PROPOSAL
+    synthetic_data_generation: "gpt-5.2"  # DESIGN PROPOSAL
+    optional_fast_model: null  # DESIGN PROPOSAL
+  capabilities_assumptions:
+    multimodal_enabled_for_gpt_5_2: true  # USER: "a good multimodal llm from openai"
+    tool_calling_enabled: true  # DESIGN PROPOSAL: needed for CLI search, file reads, web search
+
+# ==============================================================================
+# LLM DECODING / RUNTIME SETTINGS (DESIGN PROPOSAL)
+# ==============================================================================
+llm_decoding_settings:
+  task_defaults:
+    wiki_compile_incremental:
+      model_id: "gpt-5.2"
+      temperature: 0.2
+      top_p: 0.9
+      max_output_tokens: 12000
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      seed: 42
+    wiki_index_refresh:
+      model_id: "gpt-5.2"
+      temperature: 0.1
+      top_p: 0.9
+      max_output_tokens: 8000
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      seed: 42
+    wiki_qa_synthesis:
+      model_id: "gpt-5.2"
+      temperature: 0.4
+      top_p: 0.9
+      max_output_tokens: 6000
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      seed: 42
+    artifact_render_markdown_report:
+      model_id: "gpt-5.2"
+      temperature: 0.2
+      top_p: 0.9
+      max_output_tokens: 10000
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      seed: 42
+    artifact_render_marp_slides:
+      model_id: "gpt-5.2"
+      temperature: 0.2
+      top_p: 0.9
+      max_output_tokens: 10000
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      seed: 42
+    artifact_render_matplotlib_plan_or_code:
+      model_id: "gpt-5.2"
+      temperature: 0.1
+      top_p: 0.9
+      max_output_tokens: 6000
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      seed: 42
+    wiki_lint_health_check:
+      model_id: "gpt-5.2"
+      temperature: 0.1
+      top_p: 0.9
+      max_output_tokens: 10000
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      seed: 42
+    synthetic_data_generation:
+      model_id: "gpt-5.2"
+      temperature: 0.5
+      top_p: 0.95
+      max_output_tokens: 12000
+      frequency_penalty: 0.0
+      presence_penalty: 0.0
+      seed: 42
+  global_safety_limits:
+    max_total_tokens_per_run: 2000000  # DESIGN PROPOSAL: run-level guardrail
+    max_calls_per_run: 200             # DESIGN PROPOSAL: prevents runaway loops
+
+# ==============================================================================
+# PROMPT TEMPLATES (DESIGN PROPOSAL; NONE VERBATIM IN SOURCE)
+# ==============================================================================
+prompt_templates:
+  system_prompt: |
+    You are a careful research assistant maintaining a local Markdown wiki.
+    Non-negotiable rules:
+    1) Do not fabricate facts.
+    2) Every nontrivial claim must be grounded in provided local sources
+       (wiki pages, raw documents, or tool outputs) and must include citations.
+    3) When uncertain, explicitly write 'Unknown' and propose what to ingest next.
+    4) Follow the requested output schemas exactly.
+  wiki_compile_incremental_prompt: |
+    TASK: Incrementally compile new/changed raw sources into the compiled wiki.
+
+    INPUTS PROVIDED:
+    - changed_raw_files: list of {path, type, content_excerpt or content}
+    - existing_wiki_context: list of {path, content_excerpt or content}
+    - conventions: directory targets, link style, required sections
+
+    REQUIREMENTS:
+    1) For each changed raw source, create/update a source summary page.
+    2) Extract concepts; create/update concept pages; add bidirectional links.
+    3) Maintain/update index files with brief summaries.
+    4) Do not rewrite unrelated pages.
+    5) Do not invent facts; cite raw excerpts or existing wiki pages.
+
+    OUTPUT SCHEMA (JSON):
+    {
+      "files_to_write": [{"path": "...", "content_markdown": "..."}],
+      "files_to_edit": [{"path": "...", "patch_instructions": "..."}],
+      "new_concepts": [{"title": "...", "rationale": "..."}],
+      "open_questions": ["..."]
+    }
+  wiki_qa_prompt: |
+    TASK: Answer the user question by consulting the local wiki.
+
+    PROCESS:
+    1) Use index excerpts to propose a shortlist of relevant pages (paths).
+    2) After pages are provided, synthesize an answer grounded in those pages.
+    3) Cite wiki paths for every substantive claim.
+    4) If the wiki lacks information, explicitly say so and recommend what to ingest.
+
+    OUTPUT FORMAT (Markdown):
+    ## Conclusion
+    ## Evidence (with citations)
+    ## Caveats / Unknowns
+    ## Pages Consulted (paths)
+    ## Recommended Wiki Improvements
+  artifact_render_markdown_report_prompt: |
+    TASK: Render a durable Markdown report to be saved as a file in the repo.
+
+    CONSTRAINTS:
+    - Output must be valid Markdown suitable for Obsidian.
+    - Must include citations as wiki links or explicit repo-relative paths.
+    - Do not introduce facts beyond the grounded findings provided.
+
+    STRUCTURE:
+    # {Title}
+    ## Executive Summary
+    ## Main Analysis
+    ## Evidence & Citations
+    ## Limitations
+    ## Next Questions
+  artifact_render_marp_prompt: |
+    TASK: Render a Marp slide deck (Marp-flavored Markdown).
+
+    CONSTRAINTS:
+    - Use '---' slide separators.
+    - Keep slides concise (one main idea per slide).
+    - Include a final 'References' slide.
+    - Ground all factual bullets in citations.
+  wiki_lint_prompt: |
+    TASK: Run health checks over the wiki.
+
+    FIND AND REPORT (with exact evidence excerpts and page paths):
+    1) Contradictions / inconsistencies
+    2) Missing data / missing citations / undefined terms
+    3) Structural issues: broken links, orphan pages, duplicates
+    4) Opportunity: interesting cross-links, candidate new pages
+
+    OUTPUT (Markdown):
+    ## Summary Table (Issue, Severity, Page)
+    ## Detailed Findings (with evidence excerpts)
+    ## Proposed Minimal Patches (do not rewrite entire pages)
+    ## Suggested New Pages / Questions
+  synthetic_data_generation_prompt: |
+    TASK: Generate synthetic supervised examples strictly grounded in provided wiki pages.
+
+    RULES:
+    - Every example must be answerable using ONLY the provided pages.
+    - Each example must include citations (repo-relative wiki page paths).
+    - Do not add external facts.
+
+    OUTPUT: JSONL (one JSON object per line) with fields:
+    - instruction
+    - input
+    - output
+    - citations (list of paths)
+    - difficulty (EASY|MEDIUM|HARD)
+    - notes
+
+# ======================================================================================
+# SCRIPTED CALLS ORCHESTRATION (DESIGN PROPOSAL; REQUIRED TO IMPLEMENT "AGENT" BEHAVIOR)
+# ======================================================================================
+scripted_calls_framework_details:
+  call_ordering_per_cycle:
+    - "ingest_raw_updates"
+    - "compile_incremental_wiki"
+    - "refresh_indexes_if_needed"
+    - "run_lint_health_checks"
+    - "apply_lint_patches_after_review"
+    - "answer_selected_questions"
+    - "render_outputs_as_files"
+    - "file_outputs_back_into_wiki"
+  chunking_policy:
+    max_chars_per_chunk: 12000
+    overlap_chars: 800
+    preserve_headings: true
+    include_image_captions_if_present: true
+    for_code_repos:
+      summarize_readme_first: true
+      then_index_src_tree: true
+      max_files_to_sample_per_run: 50
+      prefer_entrypoints:
+        - "README.md"
+        - "pyproject.toml"
+        - "package.json"
+        - "setup.py"
+    for_pdfs:
+      prefer_extracted_markdown_if_available: true
+      else_use_pdf_text_tool: true
+  file_diff_and_patch_strategy:
+    prefer_patch_edits_over_full_rewrite: true
+    max_full_rewrite_file_chars: 20000
+    patch_format: "natural_language_patch_instructions_with_exact_anchors"
+    edit_scope_rule: "only_pages_touched_by_changed_raw_or_lint_findings"
+  validation_rules_before_writing_files:
+    allowed_write_roots:
+      - "wiki/"
+      - "assets/"
+      - "logs/"
+    forbidden_write_roots:
+      - "raw/"
+    require_markdown_extension_for_wiki_pages: true
+    require_nonempty_title_header: true
+    require_provenance_block_on_source_summaries: true
+    link_validation:
+      check_internal_links_resolve: true
+      allow_unresolved_links_if_flagged: true
+      unresolved_link_marker: "UNRESOLVED_LINK"
+    no_fabrication_heuristics:
+      flag_numbers_without_citation: true
+      flag_named_entities_without_source: true
+  logging_schema:
+    log_dir: "logs/"
+    per_call_log_fields:
+      - "timestamp_utc"
+      - "stage_name"
+      - "model_id"
+      - "decoding_settings"
+      - "prompt_text"
+      - "input_file_paths_and_hashes"
+      - "tool_calls_and_results"
+      - "raw_model_output"
+      - "validated_file_operations"
+      - "warnings"
+    per_run_summary_fields:
+      - "run_id"
+      - "start_time_utc"
+      - "end_time_utc"
+      - "raw_inputs_changed"
+      - "wiki_files_written"
+      - "wiki_files_edited"
+      - "lint_issues_found_count"
+      - "questions_answered_count"
+      - "artifacts_generated_count"
+
+# =====================================================================================
+# RETRIEVAL / SEARCH TOOL PARAMETERS (SOURCE-FAITHFUL INTENT + DESIGN PROPOSAL DETAILS)
+# =====================================================================================
+retrieval_and_search_parameters:
+  naive_search_engine_over_wiki: true
+  interfaces:
+    web_ui: true
+    cli_tool_for_llm: true
+  search_engine_design:
+    ranking_function: "BM25"
+    tokenization:
+      lowercase: true
+      strip_punctuation: true
+      split_on_whitespace: true
+      stopwords: "english_basic"
+      stemming: false
+    field_boosts:
+      title: 3.0
+      headings: 2.0
+      body: 1.0
+      tags_front_matter: 2.0
+    snippet_policy:
+      snippet_chars: 240
+      highlight_query_terms: true
+    top_k_default: 20
+    max_results_returned_to_llm: 10
+  tool_assisted_qa_policy:
+    use_search_first_for_broad_queries: true
+    search_query_rewrite_rounds_max: 2
+    pages_to_read_max: 8
+
+# ====================================================================================
+# LINTING / HEALTH CHECK PARAMETERS (SOURCE-FAITHFUL INTENT + DESIGN PROPOSAL DETAILS)
+# ====================================================================================
+linting_thresholds_and_policies:
+  llm_health_checks_enabled: true
+  targets_source_faithful:
+    inconsistent_data_detection: true
+    missing_data_imputation: true
+    uses_web_searchers_for_imputation: true
+    connection_discovery: true
+    new_article_candidates: true
+    data_integrity_enhancement: true
+    suggest_further_questions: true
+  severity_levels:
+    - "INFO"
+    - "LOW"
+    - "MEDIUM"
+    - "HIGH"
+    - "CRITICAL"
+  contradiction_policy:
+    what_counts_as_contradiction:
+      - "two pages define same concept with incompatible definitions"
+      - "two pages report different numeric values for same quantity without context"
+      - "timeline/date conflicts for same event"
+    default_severity: "HIGH"
+    require_evidence_excerpts: true
+    require_proposed_resolution_options:
+      - "scope_disambiguation"
+      - "merge_pages"
+      - "mark_one_as_outdated"
+      - "add_citations_and_context"
+  missing_data_policy:
+    what_counts_as_missing:
+      - "undefined acronym used without definition"
+      - "TODO placeholder"
+      - "claim without citation in a summary/concept page"
+      - "broken link to a referenced page"
+    default_severity: "MEDIUM"
+  web_imputation_policy:
+    allowed_if:
+      - "missing datum is factual and externally verifiable (date, author, definition)"
+      - "web search tool returns authoritative source (paper, docs, official page)"
+    forbidden_if:
+      - "imputation would require guesswork or subjective interpretation"
+      - "no authoritative source found"
+    provenance_requirements:
+      must_record_source_url: true
+      must_quote_or_snippet: true
+      must_label_requires_verification_if_not_primary: true
+  connection_discovery_policy:
+    max_new_connection_suggestions_per_run: 20
+    suggest_new_concept_page_if:
+      - ">=3 sources mention same idea"
+      - "idea appears in multiple subdomains and lacks a concept page"
+
+# ==================================================================================================
+# OUTPUT ARTIFACTS & PLOT CONSTRUCTION PARAMETERS (SOURCE-FAITHFUL INTENT + DESIGN PROPOSAL DETAILS)
+# ==================================================================================================
+outputs_and_visualizations:
+  preferred_output_modalities_source_faithful:
+    markdown_files: true
+    marp_slides: true
+    matplotlib_images: true
+  artifact_filing_policy_source_faithful:
+    file_outputs_back_into_wiki: true
+    queries_add_up: true
+  artifact_paths_design_proposal:
+    reports_dir: "wiki/derived/reports/"
+    slides_dir: "wiki/derived/slides/"
+    figures_dir: "wiki/derived/figures/"
+  plot_construction_parameters:
+    library: "matplotlib"
+    default_style:
+      figure_size_inches: [10, 6]
+      dpi: 200
+      grid: true
+      title_fontsize: 14
+      label_fontsize: 12
+    output_formats:
+      - ".png"
+
+# ======================================================================================
+# NETWORK ARCHITECTURE PARAMETERS (SOURCE-FAITHFUL: NONE; DESIGN PROPOSAL PLACEHOLDERS)
+# ======================================================================================
+network_architecture_parameters:
+  explicit_architectures_named_in_source: []
+  fine_tuning_base_model:
+    model_id: "openai/gpt-oss-20b"
+    parameter_count_estimate: 20000000000
+    architecture_details:
+      type: "unknown_not_specified_in_source_or_user_prompt"
+      num_layers: null
+      hidden_size: null
+      num_attention_heads: null
+      context_window_tokens: null
+      notes: "No internal architecture fields are provided by the availed post or the user. Do not fabricate. Populate if the model card is available."
+  qa_model:
+    model_id: "gpt-5.2"
+    architecture_details:
+      type: "proprietary_unspecified"
+      notes: "Architecture details are not provided; treat as a black-box API model."
+
+# ===========================================================================================
+# SYNTHETIC DATA + FINE-TUNING EXPLORATION (SOURCE-FAITHFUL INTENT + DESIGN PROPOSAL DETAILS)
+# ===========================================================================================
+fine_tuning_exploration:
+  enabled: true
+  source_faithful_goal: "move_knowledge_from_context_into_weights"
+  synthetic_data_schema:
+    format: "jsonl"
+    fields:
+      - "instruction"
+      - "input"
+      - "output"
+      - "citations"
+      - "difficulty"
+      - "notes"
+    grounding_rule: "output_must_be_answerable_from_cited_pages_only"
+  train_val_test_split_policy:
+    split_unit: "source_id_or_concept_cluster"
+    train_fraction: 0.80
+    val_fraction: 0.10
+    test_fraction: 0.10
+    no_overlap_constraint: true
+  fine_tuning_method:
+    approach: "SFT_with_LoRA"
+    base_model_id: "openai/gpt-oss-20b"
+    lora_config:
+      rank_r: 16
+      alpha: 32
+      dropout: 0.05
+      target_modules: "ATTENTION_AND_MLP_DEFAULT"
+  training_hyperparameters:
+    learning_rate: 1e-4
+    batch_size_effective: 128
+    num_epochs: 2
+    weight_decay: 0.01
+    warmup_ratio: 0.03
+    max_seq_length_tokens: 8192
+    optimizer: "AdamW"
+    gradient_clip_norm: 1.0
+    mixed_precision: "bf16_or_fp16"
+    seed: 42
+  evaluation_protocol:
+    benchmarks:
+      heldout_qa_set:
+        size_questions: 50
+        requires_multi_document_synthesis_fraction: 0.4
+        citation_required: true
+      regression_questions_from_real_usage:
+        size_questions: 50
+        citation_required: true
+    metrics:
+      answer_quality_human_rubric:
+        - "factuality"
+        - "completeness"
+        - "clarity"
+        - "calibration_of_uncertainty"
+      grounding_metrics:
+        - "citation_coverage_rate"
+        - "citation_correctness_rate"
+      efficiency_metrics:
+        - "pages_read_per_answer"
+        - "tool_calls_per_answer"
+        - "latency_seconds_per_answer"
+      safety_metrics:
+        - "hallucination_incidents_count"
+        - "uncertainty_marking_rate_when_unsupported"
+    acceptance_criteria:
+      no_significant_drop_in_citation_correctness: true
+      improve_efficiency_or_recall: true
+
+# ================================================================================
+# ESSENTIAL METHODOLOGICAL NOTES / INVARIANTS (SOURCE-FAITHFUL + DESIGN PROPOSAL)
+# ================================================================================
+methodological_notes:
+  source_faithful_invariants:
+    - "Raw sources are collected locally and indexed under raw/."
+    - "An LLM incrementally compiles a Markdown wiki from raw/."
+    - "The compiled wiki includes summaries, backlinks, concept categorization, and concept articles."
+    - "Index files and brief summaries support Q&A at small scale without fancy RAG."
+    - "Outputs are rendered as files (Markdown, Marp slides, matplotlib images) and viewed in Obsidian."
+    - "Outputs are often filed back into the wiki so explorations accumulate."
+    - "LLM linting/health checks improve integrity (inconsistencies, missing data with web search, connections)."
+    - "Auxiliary tools (naive search engine) can be used directly and via CLI by the LLM."
+    - "Optional future direction: synthetic data generation + fine-tuning to internalize knowledge."
+  design_proposal_invariants:
+    - "All LLM writes are gated by validation rules and logged."
+    - "raw/ is append-only; wiki/ is LLM-managed; humans supervise via Obsidian."
+    - "Every substantive claim in compiled/derived artifacts must cite a local wiki page or raw excerpt."
+    - "Prefer minimal patch edits over full rewrites to reduce diff noise and preserve stability."
